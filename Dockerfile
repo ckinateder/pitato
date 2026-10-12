@@ -53,7 +53,9 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN ln -s /opt/pi/pi /usr/local/bin/pi \
  && chmod 0755 /usr/local/bin/entrypoint.sh \
  && useradd --uid 10001 --user-group --no-create-home --home-dir /home/pi --shell /usr/sbin/nologin pi \
- && mkdir -p /workspace /home/pi/.pi && chown 10001:10001 /workspace /home/pi/.pi
+ && mkdir -p /workspace /home/pi/.pi && chown 10001:10001 /workspace \
+ # 0777: pi-here runs the container as the host uid, which must be able to write the volume
+ && chmod 0777 /home/pi/.pi
 ENV HOME=/home/pi \
     PI_CODING_AGENT_DIR=/home/pi/.pi/agent \
     PI_OFFLINE=1 \

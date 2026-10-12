@@ -29,5 +29,7 @@ case "$PWD/" in
     *) echo "error: current dir '$PWD' is not inside --root '$root'" >&2; exit 1 ;;
 esac
 
+if [[ $EUID -eq 0 ]]; then echo "error: don't run pi-here as root" >&2; exit 1; fi
+
 workdir="/workspace${PWD#"$root"}"
-PROJECT_DIR="$root" exec docker compose -f "$compose_file" run --rm -w "$workdir" "${entrypoint[@]}" pi "$@"
+HOST_UID="$(id -u)" HOST_GID="$(id -g)" PROJECT_DIR="$root" exec docker compose -f "$compose_file" run --rm -w "$workdir" "${entrypoint[@]}" pi "$@"
