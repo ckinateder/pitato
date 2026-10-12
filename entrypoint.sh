@@ -23,6 +23,10 @@ for value in "$PI_BASE_URL" "$PI_MODEL"; do
     esac
 done
 
+# Without "reasoning": true Pi treats the model as non-thinking and disables /thinking.
+# Set PI_REASONING=0 for models that reject reasoning_effort.
+if [ "${PI_REASONING:-1}" = "0" ]; then reasoning=false; else reasoning=true; fi
+
 mkdir -p "$PI_CODING_AGENT_DIR"
 cat > "$PI_CODING_AGENT_DIR/models.json" <<EOF
 {
@@ -31,7 +35,7 @@ cat > "$PI_CODING_AGENT_DIR/models.json" <<EOF
       "baseUrl": "$PI_BASE_URL",
       "api": "openai-completions",
       "apiKey": "$api_key",
-      "models": [{ "id": "$PI_MODEL" }]
+      "models": [{ "id": "$PI_MODEL", "reasoning": $reasoning }]
     }
   }
 }
