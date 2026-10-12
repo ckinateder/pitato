@@ -37,4 +37,6 @@ cat > "$PI_CODING_AGENT_DIR/models.json" <<EOF
 }
 EOF
 
-exec pi --provider custom --model "$PI_MODEL" "$@"
+# Plan mode ships as an example extension; load the image's read-only copy.
+exec pi --extension /opt/pi/examples/extensions/plan-mode/index.ts \
+    --provider custom --model "$PI_MODEL" "$@"
