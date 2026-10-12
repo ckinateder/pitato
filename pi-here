@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Run Pi in the container against the directory you're standing in.
+#
+#   pi-here                  mount $PWD as /workspace
+#   pi-here --root ~/code    mount ~/code, start in the subdir matching $PWD
+#   pi-here --shell          bash instead of Pi (combine with --root)
+#   pi-here [pi args...]     anything else is passed to Pi
+set -euo pipefail
+
+compose_file="$(dirname "$(readlink -f "$0")")/compose.yaml"
+root="$PWD"
+entrypoint=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --root)  root="$(readlink -f "${2:?--root needs a directory}")"; shift 2 ;;
+        --shell) entrypoint=(--entrypoint bash); shift ;;
+        *) break ;;
+    esac
+done
+
+# Mounting these would expose far more than a project (ssh keys, everything).
+if [[ "$root" == "/" || "$root" == "$HOME" ]]; then
+    echo "error: refusing to mount '$root'; pick a project dir or a subdir of it" >&2
+    exit 1
+fi
+case "$PWD/" in
+    "$root"/*) ;;
+    *) echo "error: current dir '$PWD' is not inside --root '$root'" >&2; exit 1 ;;
+esac
+
+workdir="/workspace${PWD#"$root"}"
+PROJECT_DIR="$root" exec docker compose -f "$compose_file" run --rm -w "$workdir" "${entrypoint[@]}" pi "$@"

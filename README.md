@@ -13,6 +13,18 @@ docker compose run --rm pi
 
 Extra args go to Pi: `docker compose run --rm pi -p "explain this repo"`.
 
+## Working on any project: `pi-here`
+
+Put `pi-here` on your PATH (e.g. `ln -s "$PWD/pi-here" ~/.local/bin/pi-here`), then from any project dir:
+
+```sh
+pi-here                       # mounts the current dir as /workspace
+pi-here --root ~/code         # mounts ~/code; starts in the subdir you're in
+pi-here --shell               # bash instead of Pi (works with --root)
+```
+
+It refuses to mount `/` or `$HOME`. Mounting a parent dir gives the agent write access to everything under it.
+
 ## What's in the image
 
 | Tool | How | Pin |
