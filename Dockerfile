@@ -12,7 +12,7 @@ ARG RTK_VERSION=v0.51.0
 ARG RTK_COMMIT=e001f773f80b22b7dc4c7a79521b30e35aaef026
 
 # ---- Pi: built from the checksum-verified release source archive ----
-FROM node:22-bookworm-slim AS pi-build
+FROM node:24-trixie-slim AS pi-build
 ARG PI_VERSION
 ARG PI_SOURCE_SHA256
 ARG BUN_VERSION
@@ -33,7 +33,7 @@ RUN cd "pi-${PI_VERSION}" \
 
 # ---- rtk: built from source, pinned tag + commit, locked deps ----
 # (not `cargo install rtk`: that crate name belongs to an unrelated project)
-FROM rust:1-bookworm AS rtk-build
+FROM rust:1-trixie AS rtk-build
 ARG RTK_VERSION
 ARG RTK_COMMIT
 RUN git clone --depth 1 --branch "${RTK_VERSION}" https://github.com/rtk-ai/rtk /rtk \
@@ -42,7 +42,7 @@ RUN git clone --depth 1 --branch "${RTK_VERSION}" https://github.com/rtk-ai/rtk 
  && cargo build --release --locked
 
 # ---- Runtime: no compilers, curl, or npm ----
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 # Tools available to the agent. Add more apt packages here.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates fd-find git ripgrep \
