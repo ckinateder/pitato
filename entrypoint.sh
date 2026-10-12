@@ -1,0 +1,40 @@
+#!/bin/sh
+# Renders Pi's custom-provider config from env, then starts Pi.
+# A real API key is NOT written to disk: models.json references $PI_API_KEY
+# and Pi interpolates it from the environment.
+set -eu
+
+for var in PI_BASE_URL PI_MODEL; do
+    eval "value=\${$var:-}"
+    [ -n "$value" ] || { echo "error: $var is required" >&2; exit 1; }
+done
+
+# PI_API_KEY may be blank (e.g. local models). Pi still wants a key, so use a placeholder.
+if [ -n "${PI_API_KEY:-}" ]; then
+    api_key='$PI_API_KEY'
+else
+    api_key='none'
+fi
+
+# Values are embedded in JSON below; refuse characters that would break it.
+for value in "$PI_BASE_URL" "$PI_MODEL"; do
+    case "$value" in
+        *\"* | *\\*) echo "error: PI_BASE_URL/PI_MODEL must not contain \" or \\" >&2; exit 1 ;;
+    esac
+done
+
+mkdir -p "$PI_CODING_AGENT_DIR"
+cat > "$PI_CODING_AGENT_DIR/models.json" <<EOF
+{
+  "providers": {
+    "custom": {
+      "baseUrl": "$PI_BASE_URL",
+      "api": "openai-completions",
+      "apiKey": "$api_key",
+      "models": [{ "id": "$PI_MODEL" }]
+    }
+  }
+}
+EOF
+
+exec pi --provider custom --model "$PI_MODEL" "$@"
