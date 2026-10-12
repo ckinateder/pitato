@@ -23,7 +23,13 @@ pi-here --root ~/code         # mounts ~/code; starts in the subdir you're in
 pi-here --shell               # bash instead of Pi (works with --root)
 ```
 
-It refuses to mount `/` or `$HOME`. Mounting a parent dir gives the agent write access to everything under it.
+It refuses to mount `/` or `$HOME`. Mounting a parent dir gives the agent write access to everything under it. It runs the container as your uid/gid, so files in the project stay owned by you.
+
+## Built-in modes and commands
+
+- **Plan mode** (Pi's example extension, loaded from the image): `/plan` or Ctrl+Alt+P toggles read-only exploration; `--plan` starts in it.
+- **`/review [git range or focus]`**: reviews `git diff HEAD` plus untracked files (or the range you give) and reports findings by severity. Read-only by instruction only; the container is the real boundary.
+- **Thinking level**: `/thinking`, or `pi-here --thinking high`. The model is declared as reasoning-capable; set `PI_REASONING=0` in `.env` for models that reject `reasoning_effort`. Whether the level changes behaviour depends on your server.
 
 ## What's in the image
 

@@ -42,5 +42,7 @@ cat > "$PI_CODING_AGENT_DIR/models.json" <<EOF
 EOF
 
 # Plan mode ships as an example extension; load the image's read-only copy.
+# /review is a prompt template baked into the image for the same reason.
 exec pi --extension /opt/pi/examples/extensions/plan-mode/index.ts \
+    --prompt-template /opt/prompts/review.md \
     --provider custom --model "$PI_MODEL" "$@"

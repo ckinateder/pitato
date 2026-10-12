@@ -49,6 +49,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=pi-build /out/linux-x64/ /opt/pi/
 COPY --from=rtk-build /rtk/target/release/rtk /usr/local/bin/rtk
+COPY prompts /opt/prompts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN ln -s /opt/pi/pi /usr/local/bin/pi \
  && chmod 0755 /usr/local/bin/entrypoint.sh \
