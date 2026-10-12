@@ -1,4 +1,4 @@
-# pilfer
+# pitato
 
 Hardened Docker image for the [Pi coding agent](https://github.com/earendil-works/pi), pointed at one OpenAI-compatible endpoint. Includes `ripgrep` (apt) and `rtk` (built from source).
 
