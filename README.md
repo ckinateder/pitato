@@ -5,7 +5,7 @@ Hardened Docker image for the [Pi coding agent](https://github.com/earendil-work
 ## Use
 
 ```sh
-cp .env.example .env        # set PI_BASE_URL, PI_API_KEY, PI_MODEL
+cp .env.example .env        # set PI_BASE_URL, PI_API_KEY, PI_MODEL (+ optional ALLOWED_DOMAINS)
 mkdir -p workspace          # or set PROJECT_DIR=/path/to/project
 docker compose build
 docker compose run --rm pi
@@ -21,9 +21,26 @@ Put `pi-here` on your PATH (e.g. `ln -s "$PWD/pi-here" ~/.local/bin/pi-here`), t
 pi-here                       # mounts the current dir as /workspace
 pi-here --root ~/code         # mounts ~/code; starts in the subdir you're in
 pi-here --shell               # bash instead of Pi (works with --root)
+pi-here --open                # unrestricted network (skips the egress proxy)
+pi-here -h                    # help
 ```
 
+Options must come before Pi's own args; the first unrecognised argument and everything after it goes to Pi.
+
 It refuses to mount `/` or `$HOME`. Mounting a parent dir gives the agent write access to everything under it. It runs the container as your uid/gid, so files in the project stay owned by you.
+
+## Egress allowlist
+
+By default the container has no route to the internet. Its only way out is a Squid sidecar (`proxy/`) that allows the host in `PI_BASE_URL` plus anything in `ALLOWED_DOMAINS` (comma-separated, in `.env`; `.example.com` also matches subdomains). Everything else gets a 403. HTTPS is filtered by hostname on `CONNECT`, with no TLS interception.
+
+```sh
+ALLOWED_DOMAINS=github.com,.npmjs.org
+```
+
+- `pi-here` starts the proxy and recreates it when `.env` changes. It keeps running afterwards; stop it with `docker compose down`.
+- `pi-here --open` skips the proxy and uses the normal open network.
+- The allowlist is by hostname, not content: anything the agent can read can be sent to an allowed host.
+- Plain `docker compose run --rm pi` also goes through the proxy and starts it if needed, but won't recreate a running proxy after you edit `.env`; use `docker compose up -d --wait proxy` for that. `docker compose run --rm pi-open` is the open equivalent.
 
 ## Built-in modes and commands
 
@@ -53,6 +70,6 @@ Adding a tool: add it to the `apt-get install` line, or add a builder stage and 
 
 - Non-root (uid 10001), read-only root fs, `cap_drop: ALL`, `no-new-privileges`, pid and memory limits.
 - Persistent: `/workspace` and the `pi-data` named volume (`/home/pi/.pi`: Pi config and sessions). The rest of `/home/pi` and `/tmp` are tmpfs. `docker compose down -v` deletes the volume.
-- `PI_API_KEY` may be blank for local models (a placeholder is used). A real key comes from runtime env only. It is not in the image, and `models.json` references `$PI_API_KEY` rather than containing it. It is still visible to anyone with Docker access (`docker inspect`).
-- The network is open, since the agent must reach your endpoint. The agent can run arbitrary commands and reach any host the container can. Add an egress allowlist if that matters.
+- `PI_API_KEY` may be blank for local models (a placeholder is used). A real key comes from runtime env only. It is not in the image, and `models.json` references `$PI_API_KEY` rather than containing it. It is also passed to the proxy container (it shares `.env`), and is visible to anyone with Docker access (`docker inspect`).
+- Egress is limited to the model host plus `ALLOWED_DOMAINS` through the proxy sidecar (see above). The container sits on an internal network, so it cannot bypass the proxy. `pi-here --open` removes this restriction: the agent can then run arbitrary commands and reach any host.
 - `rtk` is installed but not wired into Pi.

@@ -4,17 +4,40 @@
 #   pi-here                  mount $PWD as /workspace
 #   pi-here --root ~/code    mount ~/code, start in the subdir matching $PWD
 #   pi-here --shell          bash instead of Pi (combine with --root)
+#   pi-here --open           unrestricted network (skip the egress allowlist proxy)
+#   pi-here -h, --help       show this help
 #   pi-here [pi args...]     anything else is passed to Pi
 set -euo pipefail
 
 compose_file="$(dirname "$(readlink -f "$0")")/compose.yaml"
 root="$PWD"
 entrypoint=()
+service=pi
+
+usage() {
+    cat <<'EOF'
+Usage: pi-here [options] [pi args...]
+
+Run Pi in the container against the current directory.
+
+Options (must come before any Pi args):
+  --root DIR   mount DIR instead of $PWD; start in the subdir matching $PWD
+  --shell      bash instead of Pi
+  --open       unrestricted network; skip the egress allowlist proxy
+  -h, --help   show this help
+
+Egress is limited to PI_BASE_URL's host plus ALLOWED_DOMAINS (see .env).
+Parsing stops at the first unknown argument; it and everything after goes to Pi,
+so `pi-here --thinking high -h` shows Pi's help, not this one.
+EOF
+}
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --root)  root="$(readlink -f "${2:?--root needs a directory}")"; shift 2 ;;
         --shell) entrypoint=(--entrypoint bash); shift ;;
+        --open)  service=pi-open; shift ;;
+        -h|--help) usage; exit 0 ;;
         *) break ;;
     esac
 done
@@ -32,4 +55,10 @@ esac
 if [[ $EUID -eq 0 ]]; then echo "error: don't run pi-here as root" >&2; exit 1; fi
 
 workdir="/workspace${PWD#"$root"}"
-HOST_UID="$(id -u)" HOST_GID="$(id -g)" PROJECT_DIR="$root" exec docker compose -f "$compose_file" run --rm -w "$workdir" "${entrypoint[@]}" pi "$@"
+export HOST_UID="$(id -u)" HOST_GID="$(id -g)" PROJECT_DIR="$root"
+compose=(docker compose -f "$compose_file")
+
+# Recreates the proxy if PI_BASE_URL/ALLOWED_DOMAINS changed since it started
+if [[ $service == pi ]]; then "${compose[@]}" up -d --wait proxy; fi
+
+exec "${compose[@]}" run --rm -w "$workdir" "${entrypoint[@]}" "$service" "$@"
