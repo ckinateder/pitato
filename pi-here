@@ -18,7 +18,16 @@ usage() {
     cat <<'EOF'
 Usage: pi-here [options] [pi args...]
 
-Run Pi in the container against the current directory.
+Run the Pi coding agent in a hardened Docker container against the current directory.
+
+What the container does:
+  - Mounts only your project (default $PWD) at /workspace; nothing else of yours is visible.
+  - Runs as your uid/gid with a read-only root fs, no capabilities and pid/memory limits.
+  - Talks to the one model endpoint in .env (PI_BASE_URL, PI_MODEL, PI_API_KEY).
+  - Sends all network traffic through a Squid proxy sidecar that allows only that
+    endpoint plus ALLOWED_DOMAINS from .env; everything else is refused.
+  - Rewrites the agent's bash commands through rtk so the model sees condensed output.
+  - Loads plan mode (/plan) and a /review prompt baked into the image.
 
 Options (must come before any Pi args):
   --root DIR   mount DIR instead of $PWD; start in the subdir matching $PWD
@@ -26,7 +35,6 @@ Options (must come before any Pi args):
   --open       unrestricted network; skip the egress allowlist proxy
   -h, --help   show this help
 
-Egress is limited to PI_BASE_URL's host plus ALLOWED_DOMAINS (see .env).
 Parsing stops at the first unknown argument; it and everything after goes to Pi,
 so `pi-here --thinking high -h` shows Pi's help, not this one.
 EOF

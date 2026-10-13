@@ -43,8 +43,9 @@ EOF
 
 # Plan mode ships as an example extension; load the image's read-only copy.
 # /review is a prompt template baked into the image for the same reason.
-# rtk.ts rewrites bash calls through rtk to cut output tokens.
+# rtk.ts rewrites bash calls through rtk to cut output tokens; rtk.md tells the model how to recall what it elides.
 exec pi --extension /opt/pi/examples/extensions/plan-mode/index.ts \
     --extension /opt/rtk/rtk.ts \
+    --append-system-prompt /opt/prompts/rtk.md \
     --prompt-template /opt/prompts/review.md \
     --provider custom --model "$PI_MODEL" "$@"

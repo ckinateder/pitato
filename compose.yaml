@@ -58,7 +58,6 @@ services:
       interval: 2s
       timeout: 2s
       retries: 15
-    restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]

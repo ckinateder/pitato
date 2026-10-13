@@ -1,0 +1,1 @@
+Your bash commands may be rewritten through rtk, which condenses their output to save tokens, so output can omit detail. If output looks incomplete or shows a recovery hint with a hash, run `rtk recall <hash>` to get the elided part (`--full` for everything, `--grep REGEX`, `--from N`, `--lines N` to narrow it).
