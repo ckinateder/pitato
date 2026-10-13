@@ -1,3 +1,7 @@
+# `pi`      default: only reaches the network through the allowlist proxy
+# `pi-open` pi-here --open: unrestricted network, no proxy
+# `proxy`   Squid sidecar; allows PI_BASE_URL's host plus ALLOWED_DOMAINS (.env)
+
 x-pi: &pi
   build: .
   image: pitato:latest
@@ -23,22 +27,16 @@ x-pi: &pi
   mem_limit: 2g
 
 services:
-  # Default: no route out except through the allowlist proxy
   pi:
     <<: *pi
     networks: [internal]
     environment:
-      HTTP_PROXY: http://proxy:3128
-      HTTPS_PROXY: http://proxy:3128
-      http_proxy: http://proxy:3128
-      https_proxy: http://proxy:3128
-      NO_PROXY: localhost,127.0.0.1
-      no_proxy: localhost,127.0.0.1
+      HTTP_PROXY: &proxy_url http://proxy:3128
+      HTTPS_PROXY: *proxy_url
     depends_on:
       proxy:
         condition: service_healthy
 
-  # pi-here --open: unrestricted network, no proxy
   pi-open:
     <<: *pi
     profiles: [open]
