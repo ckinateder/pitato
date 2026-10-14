@@ -1,48 +1,38 @@
-# `pi`      default: only reaches the network through the allowlist proxy
-# `pi-open` pi-here --open: unrestricted network, no proxy
-# `proxy`   Squid sidecar; allows PI_BASE_URL's host plus ALLOWED_DOMAINS (.env)
-
-x-pi: &pi
-  build: .
-  image: pitato:latest
-  env_file: .env
-  # pi-here sets HOST_UID/HOST_GID so files in /workspace are owned by you
-  user: "${HOST_UID:-10001}:${HOST_GID:-10001}"
-  working_dir: /workspace
-  stdin_open: true
-  tty: true
-  volumes:
-    # Only the project you want the agent to touch (override with PROJECT_DIR)
-    - ${PROJECT_DIR:-./workspace}:/workspace
-    # Pi config + sessions persist here
-    - pi-data:/home/pi/.pi
-  read_only: true
-  tmpfs:
-    - /tmp:size=256m,mode=1777
-    # Rest of HOME (caches etc.); ephemeral
-    - /home/pi:size=64m,uid=${HOST_UID:-10001},gid=${HOST_GID:-10001},mode=0700
-  cap_drop: [ALL]
-  security_opt: ["no-new-privileges:true"]
-  pids_limit: 256
-  mem_limit: 2g
+# `pi`      only reaches the network through the allowlist proxy
+# `proxy`   Squid sidecar; allows PI_BASE_URL's host plus ALLOWED_DOMAINS (.env);
+#           ALLOWED_DOMAINS=* allows everything
 
 services:
   pi:
-    <<: *pi
-    networks: [internal]
+    build: .
+    image: pitato:latest
+    env_file: .env
     environment:
-      HTTP_PROXY: &proxy_url http://proxy:3128
-      HTTPS_PROXY: *proxy_url
+      HTTP_PROXY: http://proxy:3128
+      HTTPS_PROXY: http://proxy:3128
+    # pi-here sets HOST_UID/HOST_GID so files in /workspace are owned by you
+    user: "${HOST_UID:-10001}:${HOST_GID:-10001}"
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    volumes:
+      # Only the project you want the agent to touch (override with PROJECT_DIR)
+      - ${PROJECT_DIR:-./workspace}:/workspace
+      # Pi config + sessions persist here
+      - pi-data:/home/pi/.pi
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+      # Rest of HOME (caches etc.); ephemeral
+      - /home/pi:size=64m,uid=${HOST_UID:-10001},gid=${HOST_GID:-10001},mode=0700
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 2g
+    networks: [internal]
     depends_on:
       proxy:
         condition: service_healthy
-
-  pi-open:
-    <<: *pi
-    profiles: [open]
-    extra_hosts:
-      # Lets the container reach a model server running on the Docker host (Linux)
-      - "host.docker.internal:host-gateway"
 
   proxy:
     build: ./proxy
@@ -50,6 +40,7 @@ services:
     env_file: .env
     networks: [internal, egress]
     extra_hosts:
+      # Lets the proxy reach a model server running on the Docker host (Linux)
       - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3128"]

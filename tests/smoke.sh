@@ -56,13 +56,12 @@ check "empty PI_BASE_URL: up --wait fails" "yes" "$failed"
 check "empty PI_BASE_URL: error logged" "PI_BASE_URL is required" "$(docker compose logs proxy 2>&1)"
 cp "$backup" .env; docker compose up -d --wait proxy >/dev/null 2>&1
 
-echo "== pi-here --open"
-# pi-here needs a tty (compose sets tty: true), so go through script(1)
-open_log="$(mktemp)"
-script -qec "./pi-here --open --shell -c 'timeout 5 bash -c \"exec 3<>/dev/tcp/1.1.1.1/443\" && echo OPEN-REACHABLE; echo proxyvars=\$(env | grep -ci proxy)'" "$open_log" >/dev/null 2>&1
-open_out="$(tr -d '\r\0' < "$open_log")"; rm -f "$open_log"
-check "--open reaches the internet" "OPEN-REACHABLE" "$open_out"
-check "--open sets no proxy env" "proxyvars=0" "$open_out"
+echo "== proxy: ALLOWED_DOMAINS=*"
+set_env "*"
+check "any host allowed" "200" "$(connect example.com:443)"
+check "any port allowed" "200" "$(connect github.com:22)"
+check "still no route around proxy" "blocked" "$(in_pi 'timeout 4 bash -c "exec 3<>/dev/tcp/1.1.1.1/443" 2>/dev/null && echo reachable || echo blocked')"
+cp "$backup" .env; docker compose up -d --wait proxy >/dev/null 2>&1
 
 echo "== rtk"
 check "extension readable by the container user" "readable" "$(in_pi 'test -r /opt/rtk/rtk.ts && echo readable')"

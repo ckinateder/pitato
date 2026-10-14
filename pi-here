@@ -4,7 +4,6 @@
 #   pi-here                  mount $PWD as /workspace
 #   pi-here --root ~/code    mount ~/code, start in the subdir matching $PWD
 #   pi-here --shell          bash instead of Pi (combine with --root)
-#   pi-here --open           unrestricted network (skip the egress allowlist proxy)
 #   pi-here -h, --help       show this help
 #   pi-here [pi args...]     anything else is passed to Pi
 set -euo pipefail
@@ -12,7 +11,6 @@ set -euo pipefail
 compose_file="$(dirname "$(readlink -f "$0")")/compose.yaml"
 root="$PWD"
 entrypoint=()
-service=pi
 
 usage() {
     cat <<'EOF'
@@ -25,14 +23,13 @@ What the container does:
   - Runs as your uid/gid with a read-only root fs, no capabilities and pid/memory limits.
   - Talks to the one model endpoint in .env (PI_BASE_URL, PI_MODEL, PI_API_KEY).
   - Sends all network traffic through a Squid proxy sidecar that allows only that
-    endpoint plus ALLOWED_DOMAINS from .env; everything else is refused.
+    endpoint plus ALLOWED_DOMAINS from .env (set it to * to allow everything).
   - Rewrites the agent's bash commands through rtk so the model sees condensed output.
   - Loads plan mode (/plan) and a /review prompt baked into the image.
 
 Options (must come before any Pi args):
   --root DIR   mount DIR instead of $PWD; start in the subdir matching $PWD
   --shell      bash instead of Pi
-  --open       unrestricted network; skip the egress allowlist proxy
   -h, --help   show this help
 
 Parsing stops at the first unknown argument; it and everything after goes to Pi,
@@ -44,7 +41,6 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --root)  root="$(readlink -f "${2:?--root needs a directory}")"; shift 2 ;;
         --shell) entrypoint=(--entrypoint bash); shift ;;
-        --open)  service=pi-open; shift ;;
         -h|--help) usage; exit 0 ;;
         *) break ;;
     esac
@@ -67,6 +63,6 @@ export HOST_UID="$(id -u)" HOST_GID="$(id -g)" PROJECT_DIR="$root"
 compose=(docker compose -f "$compose_file")
 
 # Recreates the proxy if PI_BASE_URL/ALLOWED_DOMAINS changed since it started
-if [[ $service == pi ]]; then "${compose[@]}" up -d --wait proxy; fi
+"${compose[@]}" up -d --wait proxy
 
-exec "${compose[@]}" run --rm -w "$workdir" "${entrypoint[@]}" "$service" "$@"
+exec "${compose[@]}" run --rm -w "$workdir" "${entrypoint[@]}" pi "$@"
